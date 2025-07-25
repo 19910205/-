@@ -8,28 +8,29 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^7.2.5|^8.0",
-        "amrshawky/laravel-currency": "^4.0",
-        "dcat/easy-excel": "^1.0",
-        "dcat/laravel-admin": "2.*",
-        "fideloper/proxy": "^4.4",
+        "php": "^8.2",
+        "amrshawky/laravel-currency": "^6.0",
+        "dcat/easy-excel": "^2.0",
+        "dcat/laravel-admin": "3.*",
         "germey/geetest": "^3.1",
         "jenssegers/agent": "^2.6",
-        "laravel/framework": "^6.20.26",
-        "laravel/tinker": "^2.5",
-        "mews/captcha": "^3.2",
+        "laravel/framework": "^10.0",
+        "laravel/tinker": "^2.8",
+        "mews/captcha": "^3.3",
         "paypal/rest-api-sdk-php": "^1.14",
-        "simplesoftwareio/simple-qrcode": "2.0.0",
-        "stripe/stripe-php": "^7.84",
+        "simplesoftwareio/simple-qrcode": "^4.2",
+        "stripe/stripe-php": "^10.0",
         "xhat/payjs-laravel": "^1.6",
-        "yansongda/pay": "^2.10"
+        "yansongda/pay": "^3.0"
     },
     "require-dev": {
-        "facade/ignition": "^1.16.15",
-        "fakerphp/faker": "^1.9.1",
-        "mockery/mockery": "^1.0",
-        "nunomaduro/collision": "^3.0",
-        "phpunit/phpunit": "^8.5.8|^9.3.3"
+        "fakerphp/faker": "^1.21",
+        "laravel/pint": "^1.0",
+        "laravel/sail": "^1.18",
+        "mockery/mockery": "^1.4.4",
+        "nunomaduro/collision": "^7.0",
+        "phpunit/phpunit": "^10.1",
+        "spatie/laravel-ignition": "^2.0"
     },
     "config": {
         "optimize-autoloader": true,
@@ -44,12 +45,10 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/"
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
         },
-        "classmap": [
-            "database/seeds",
-            "database/factories"
-        ],
         "files":[
             "app/Helpers/functions.php"
         ]
