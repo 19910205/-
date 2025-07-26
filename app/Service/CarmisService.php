@@ -30,6 +30,24 @@ class CarmisService
     {
         $carmis = Carmis::query()
             ->where('goods_id', $goodsID)
+            ->whereNull('goods_sku_id') // 只查询没有SKU的卡密
+            ->where('status', Carmis::STATUS_UNSOLD)
+            ->take($byAmount)
+            ->get();
+        return $carmis ? $carmis->toArray() : null;
+    }
+
+    /**
+     * 通过商品规格查询一些数量未使用的卡密
+     *
+     * @param int $skuID 商品规格id
+     * @param int $byAmount 数量
+     * @return array|null
+     */
+    public function withSkuByAmountAndStatusUnsold(int $skuID, int $byAmount)
+    {
+        $carmis = Carmis::query()
+            ->where('goods_sku_id', $skuID)
             ->where('status', Carmis::STATUS_UNSOLD)
             ->take($byAmount)
             ->get();

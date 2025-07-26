@@ -32,6 +32,32 @@ Route::group(['middleware' => ['dujiaoka.boot'],'namespace' => 'Home'], function
     Route::post('search-order-by-email', 'OrderController@searchOrderByEmail');
     // 通过浏览器查询
     Route::post('search-order-by-browser', 'OrderController@searchOrderByBrowser');
+
+    // 购物车路由
+    Route::prefix('cart')->group(function () {
+        Route::get('/', 'ShoppingCartController@index')->name('cart.index');
+        Route::post('/add', 'ShoppingCartController@add')->name('cart.add');
+        Route::put('/update/{cartItem}', 'ShoppingCartController@update')->name('cart.update');
+        Route::delete('/remove/{cartItem}', 'ShoppingCartController@remove')->name('cart.remove');
+        Route::delete('/clear', 'ShoppingCartController@clear')->name('cart.clear');
+        Route::post('/apply-coupon', 'ShoppingCartController@applyCoupon')->name('cart.apply-coupon');
+        Route::delete('/remove-coupon/{cartItem}', 'ShoppingCartController@removeCoupon')->name('cart.remove-coupon');
+        Route::get('/total', 'ShoppingCartController@getTotal')->name('cart.total');
+        Route::post('/checkout', 'ShoppingCartController@checkout')->name('cart.checkout');
+    });
+
+    // 商品规格API
+    Route::get('/api/goods/{goods}/skus', function (\App\Models\Goods $goods) {
+        return $goods->getAvailableSkus();
+    });
+});
+
+// 分站API路由（不需要中间件）
+Route::prefix('api/subsite')->namespace('Api')->group(function () {
+    Route::post('/orders/sync', 'SubsiteController@syncOrder');
+    Route::get('/test', 'SubsiteController@test');
+    Route::get('/goods', 'SubsiteController@getGoods');
+    Route::get('/order-status', 'SubsiteController@getOrderStatus');
 });
 
 Route::group(['middleware' => ['install.check'],'namespace' => 'Home'], function () {

@@ -45,11 +45,20 @@ class GoodsController extends AdminController
             $grid->column('in_stock')->display(function () {
                 // 如果为自动发货，则加载库存卡密
                 if ($this->type == GoodsModel::AUTOMATIC_DELIVERY) {
-                    return Carmis::query()->where('goods_id', $this->id)
-                        ->where('status', Carmis::STATUS_UNSOLD)
-                        ->count();
+                    if ($this->has_sku) {
+                        // 有多规格的商品，统计所有SKU的卡密
+                        return Carmis::query()->whereIn('goods_sku_id', $this->skus->pluck('id'))
+                            ->where('status', Carmis::STATUS_UNSOLD)
+                            ->count();
+                    } else {
+                        // 没有多规格的商品
+                        return Carmis::query()->where('goods_id', $this->id)
+                            ->whereNull('goods_sku_id')
+                            ->where('status', Carmis::STATUS_UNSOLD)
+                            ->count();
+                    }
                 } else {
-                    return $this->in_stock;
+                    return $this->has_sku ? $this->skus->sum('stock') : $this->in_stock;
                 }
             });
             $grid->column('sales_volume');
@@ -70,6 +79,11 @@ class GoodsController extends AdminController
             $grid->actions(function (Grid\Displayers\Actions $actions) {
                 if (request('_scope_') == admin_trans('dujiaoka.trashed')) {
                     $actions->append(new Restore(GoodsModel::class));
+                } else {
+                    // 添加规格管理按钮
+                    $actions->append('<a href="' . admin_url('goods-sku?goods_id=' . $actions->getKey()) . '" class="btn btn-xs btn-outline-primary">规格管理</a>');
+                    // 添加卡密管理按钮
+                    $actions->append('<a href="' . admin_url('carmis?goods_id=' . $actions->getKey()) . '" class="btn btn-xs btn-outline-success">卡密管理</a>');
                 }
             });
             $grid->batchActions(function (Grid\Tools\BatchActions $batch) {
@@ -143,9 +157,13 @@ class GoodsController extends AdminController
             )->required();
             $form->image('picture')->autoUpload()->uniqueName()->help(admin_trans('goods.helps.picture'));
             $form->radio('type')->options(GoodsModel::getGoodsTypeMap())->default(GoodsModel::AUTOMATIC_DELIVERY)->required();
+
+            // 多规格设置
+            $form->switch('has_sku', '启用多规格')->default(0)->help('启用后可以为商品设置多个规格');
+
             $form->currency('retail_price')->default(0)->help(admin_trans('goods.helps.retail_price'));
-            $form->currency('actual_price')->default(0)->required();
-            $form->number('in_stock')->help(admin_trans('goods.helps.in_stock'));
+            $form->currency('actual_price')->default(0)->required()->help('单规格商品价格，多规格商品此价格作为基础价格');
+            $form->number('in_stock')->help('单规格商品库存，多规格商品请在规格管理中设置');
             $form->number('sales_volume');
             $form->number('buy_limit_num')->help(admin_trans('goods.helps.buy_limit_num'));
             $form->editor('buy_prompt');
