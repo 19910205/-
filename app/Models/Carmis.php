@@ -52,4 +52,12 @@ class Carmis extends BaseModel
         return $this->belongsTo(Goods::class, 'goods_id');
     }
 
+    /**
+     * 关联商品规格
+     */
+    public function goodsSku()
+    {
+        return $this->belongsTo(GoodsSku::class, 'goods_sku_id');
+    }
+
 }

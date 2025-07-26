@@ -116,6 +116,22 @@ class Order extends BaseModel
     }
 
     /**
+     * 关联商品规格
+     */
+    public function goodsSku()
+    {
+        return $this->belongsTo(GoodsSku::class, 'goods_sku_id');
+    }
+
+    /**
+     * 关联分站订单
+     */
+    public function subsiteOrders()
+    {
+        return $this->hasMany(SubsiteOrder::class, 'order_id');
+    }
+
+    /**
      * 关联优惠券
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

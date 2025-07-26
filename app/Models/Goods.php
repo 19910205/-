@@ -60,6 +60,30 @@ class Goods extends BaseModel
     }
 
     /**
+     * 关联商品规格
+     */
+    public function skus()
+    {
+        return $this->hasMany(GoodsSku::class, 'goods_id');
+    }
+
+    /**
+     * 关联商品属性
+     */
+    public function attributes()
+    {
+        return $this->hasMany(GoodsAttribute::class, 'goods_id');
+    }
+
+    /**
+     * 关联购物车
+     */
+    public function cartItems()
+    {
+        return $this->hasMany(ShoppingCart::class, 'goods_id');
+    }
+
+    /**
      * 库存读取器,将自动发货的库存更改为未出售卡密的数量
      *
      * @author    assimon<ashang@utf8.hk>
@@ -75,6 +99,92 @@ class Goods extends BaseModel
            $this->attributes['in_stock'] = $this->attributes['carmis_count'];
         }
         return $this->attributes['in_stock'];
+    }
+
+    /**
+     * 是否有多规格
+     */
+    public function hasSkus(): bool
+    {
+        return $this->has_sku == 1;
+    }
+
+    /**
+     * 获取启用的规格
+     */
+    public function getEnabledSkus()
+    {
+        return $this->skus()->enabled()->orderBy('sort', 'desc')->get();
+    }
+
+    /**
+     * 获取可用的规格
+     */
+    public function getAvailableSkus()
+    {
+        return $this->skus()->available()->orderBy('sort', 'desc')->get();
+    }
+
+    /**
+     * 获取价格范围
+     */
+    public function getPriceRange(): array
+    {
+        if (!$this->hasSkus()) {
+            return [
+                'min' => $this->actual_price,
+                'max' => $this->actual_price
+            ];
+        }
+
+        $skus = $this->getEnabledSkus();
+        if ($skus->isEmpty()) {
+            return [
+                'min' => $this->actual_price,
+                'max' => $this->actual_price
+            ];
+        }
+
+        return [
+            'min' => $skus->min('price'),
+            'max' => $skus->max('price')
+        ];
+    }
+
+    /**
+     * 更新价格范围
+     */
+    public function updatePriceRange(): bool
+    {
+        $range = $this->getPriceRange();
+        return $this->update([
+            'min_price' => $range['min'],
+            'max_price' => $range['max']
+        ]);
+    }
+
+    /**
+     * 获取总库存
+     */
+    public function getTotalStock(): int
+    {
+        if (!$this->hasSkus()) {
+            return $this->in_stock;
+        }
+
+        return $this->skus()->sum('stock');
+    }
+
+    /**
+     * 获取总销量
+     */
+    public function getTotalSales(): int
+    {
+        if (!$this->hasSkus()) {
+            return $this->sales_volume ?? 0;
+        }
+
+        return $this->skus()->sum('sold_count');
     }
 
     /**

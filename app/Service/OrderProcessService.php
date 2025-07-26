@@ -77,6 +77,12 @@ class OrderProcessService
     private $goods;
 
     /**
+     * 商品规格
+     * @var \App\Models\GoodsSku
+     */
+    private $goodsSku;
+
+    /**
      * 优惠码
      * @var Coupon;
      */
@@ -190,6 +196,16 @@ class OrderProcessService
     }
 
     /**
+     * 设置商品规格
+     *
+     * @param \App\Models\GoodsSku|null $goodsSku
+     */
+    public function setGoodsSku(?\App\Models\GoodsSku $goodsSku)
+    {
+        $this->goodsSku = $goodsSku;
+    }
+
+    /**
      * 设置优惠码.
      *
      * @param ?Coupon $coupon
@@ -274,7 +290,7 @@ class OrderProcessService
      */
     private function calculateTheTotalPrice(): float
     {
-        $price = $this->goods->actual_price;
+        $price = $this->goodsSku ? $this->goodsSku->price : $this->goods->actual_price;
         return bcmul($price, $this->buyAmount, 2);
     }
 
@@ -317,8 +333,17 @@ class OrderProcessService
             $order->order_sn = strtoupper(Str::random(16));
             // 设置商品
             $order->goods_id = $this->goods->id;
+            // 设置商品规格
+            if ($this->goodsSku) {
+                $order->goods_sku_id = $this->goodsSku->id;
+                $order->sku_snapshot = json_encode($this->goodsSku->toArray());
+            }
             // 标题
-            $order->title = $this->goods->gd_name . ' x ' . $this->buyAmount;
+            $title = $this->goods->gd_name;
+            if ($this->goodsSku) {
+                $title .= ' (' . $this->goodsSku->name . ')';
+            }
+            $order->title = $title . ' x ' . $this->buyAmount;
             // 订单类型
             $order->type = $this->goods->type;
             // 查询密码
@@ -328,7 +353,7 @@ class OrderProcessService
             // 支付方式.
             $order->pay_id = $this->payID;
             // 商品单价
-            $order->goods_price = $this->goods->actual_price;
+            $order->goods_price = $this->goodsSku ? $this->goodsSku->price : $this->goods->actual_price;
             // 购买数量
             $order->buy_amount = $this->buyAmount;
             // 订单详情
@@ -358,6 +383,14 @@ class OrderProcessService
                 $this->couponService->used($this->coupon->coupon);
                 // 使用次数-1
                 $this->couponService->retDecr($this->coupon->coupon);
+            }
+
+            // 减少库存
+            if ($this->goodsSku) {
+                $this->goodsSku->decreaseStock($this->buyAmount);
+            } else {
+                $this->goods->decrement('in_stock', $this->buyAmount);
+                $this->goods->increment('sales_volume', $this->buyAmount);
             }
             // 将订单加入队列 x分钟后过期
             $expiredOrderDate = dujiaoka_config_get('order_expire_time', 5);
@@ -430,6 +463,13 @@ class OrderProcessService
             }
             // 回调事件
             ApiHook::dispatch($order);
+
+            // 创建分站订单记录
+            if (class_exists('\App\Services\SubsiteService')) {
+                $subsiteService = app('\App\Services\SubsiteService');
+                $subsiteService->createSubsiteOrder($completedOrder);
+            }
+
             return $completedOrder;
         } catch (\Exception $exception) {
             DB::rollBack();
@@ -489,7 +529,13 @@ class OrderProcessService
     public function processAuto(Order $order): Order
     {
         // 获得卡密
-        $carmis = $this->carmisService->withGoodsByAmountAndStatusUnsold($order->goods_id, $order->buy_amount);
+        if ($order->goods_sku_id) {
+            // 如果有SKU，获取对应SKU的卡密
+            $carmis = $this->carmisService->withSkuByAmountAndStatusUnsold($order->goods_sku_id, $order->buy_amount);
+        } else {
+            // 没有SKU，获取商品的卡密
+            $carmis = $this->carmisService->withGoodsByAmountAndStatusUnsold($order->goods_id, $order->buy_amount);
+        }
         // 实际可使用的库存已经少于购买数量了
         if (count($carmis) != $order->buy_amount) {
             $order->info = __('dujiaoka.prompt.order_carmis_insufficient_quantity_available');

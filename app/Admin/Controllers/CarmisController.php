@@ -26,10 +26,13 @@ class CarmisController extends AdminController
      */
     protected function grid()
     {
-        return Grid::make(new Carmis(['goods']), function (Grid $grid) {
+        return Grid::make(new Carmis(['goods', 'goodsSku']), function (Grid $grid) {
             $grid->model()->orderBy('id', 'DESC');
             $grid->column('id')->sortable();
             $grid->column('goods.gd_name', admin_trans('carmis.fields.goods_id'));
+            $grid->column('goodsSku.name', '商品规格')->display(function ($name) {
+                return $name ?: '-';
+            });
             $grid->column('status')->select(CarmisModel::getStatusMap());
             $grid->column('is_loop')->display(function($v){return $v==1?admin_trans('carmis.fields.yes'):"";});
             $grid->column('carmi')->limit(20);
@@ -40,6 +43,9 @@ class CarmisController extends AdminController
                 $filter->equal('goods_id')->select(
                     Goods::query()->where('type', Goods::AUTOMATIC_DELIVERY)->pluck('gd_name', 'id')
                 );
+                $filter->equal('goods_sku_id', '商品规格')->select(function () {
+                    return \App\Models\GoodsSku::with('goods')->get()->pluck('name_with_goods', 'id');
+                });
                 $filter->equal('status')->select(CarmisModel::getStatusMap());
                 $filter->scope(admin_trans('dujiaoka.trashed'))->onlyTrashed();
             });
@@ -94,7 +100,11 @@ class CarmisController extends AdminController
             $form->display('id');
             $form->select('goods_id')->options(
                 Goods::query()->where('type', Goods::AUTOMATIC_DELIVERY)->pluck('gd_name', 'id')
-            )->required();
+            )->required()->load('goods_sku_id', '/admin/api/goods-skus');
+
+            $form->select('goods_sku_id', '商品规格')
+                ->help('可选，如果商品有多规格请选择对应规格');
+
             $form->radio('status')
                 ->options(CarmisModel::getStatusMap())
                 ->default(CarmisModel::STATUS_UNSOLD);
